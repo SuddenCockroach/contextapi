@@ -1,16 +1,11 @@
-/**
- * Key management using Vercel KV (Redis-compatible, free tier)
- * Keys are stored as:  key:{apikey} → { credits, plan, email, created }
- */
-
-import { Redis } from "@upstash/redis";
+const { Redis } = require("@upstash/redis");
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 
-export async function validateApiKey(key) {
+async function validateApiKey(key) {
   if (!key || !key.startsWith("ctx_")) return null;
   try {
     const data = await redis.get(`key:${key}`);
@@ -21,7 +16,7 @@ export async function validateApiKey(key) {
   }
 }
 
-export async function deductCredit(key) {
+async function deductCredit(key) {
   try {
     const data = await redis.get(`key:${key}`);
     if (data) {
@@ -33,7 +28,7 @@ export async function deductCredit(key) {
   }
 }
 
-export async function createApiKey({ email, plan = "free", credits = 100 }) {
+async function createApiKey({ email, plan = "free", credits = 100 }) {
   const { nanoid } = await import("nanoid");
   const key = `ctx_${nanoid(32)}`;
   const keyData = {
@@ -47,7 +42,7 @@ export async function createApiKey({ email, plan = "free", credits = 100 }) {
   return key;
 }
 
-export async function getKeyByEmail(email) {
+async function getKeyByEmail(email) {
   try {
     const key = await redis.get(`email:${email}`);
     if (!key) return null;
@@ -57,3 +52,5 @@ export async function getKeyByEmail(email) {
     return null;
   }
 }
+
+module.exports = { validateApiKey, deductCredit, createApiKey, getKeyByEmail };

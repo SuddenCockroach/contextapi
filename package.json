@@ -1,7 +1,6 @@
 {
   "name": "contextapi",
   "version": "1.0.0",
-  "type": "module",
   "description": "Web pages, LLM-ready in one call",
   "scripts": {
     "dev": "vercel dev",
