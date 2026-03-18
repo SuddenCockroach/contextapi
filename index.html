@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ContextAPI — Web Pages, LLM-Ready in One Call</title>
+<meta name="description" content="Send any URL, get back clean structured content optimized for LLMs, RAG pipelines, and AI agents. No scraping, no parsing, no noise."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Cabinet+Grotesk:wght@400;500;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f6f1;
+  --surface:#ffffff;
+  --surface2:#f0efe8;
+  --border:#e2e1d8;
+  --border2:#cccbb8;
+  --ink:#1a1a14;
+  --ink2:#4a4a3a;
+  --muted:#8a8a72;
+  --faint:#c8c8b0;
+  --green:#1a7a4a;
+  --green-bg:#e8f5ee;
+  --green-border:#b8ddc8;
+  --amber:#8a5a00;
+  --amber-bg:#fef3d8;
+  --red:#8a1a1a;
+  --accent:#2d5a1b;
+  --accent-light:#4a8a2a;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'Cabinet Grotesk',sans-serif;
+}
+
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:14px;line-height:1.6;overflow-x:hidden}
+
+/* ── TEXTURE ── */
+body::after{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:9998;
+}
+
+/* ── NAV ── */
+nav{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 40px;height:56px;
+  background:rgba(247,246,241,0.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+}
+.logo{font-family:var(--sans);font-weight:900;font-size:17px;letter-spacing:-0.5px;color:var(--ink);text-decoration:none}
+.logo span{color:var(--accent-light)}
+.nav-r{display:flex;align-items:center;gap:24px}
+.nav-link{color:var(--muted);text-decoration:none;font-size:13px;transition:color .15s}
+.nav-link:hover{color:var(--ink)}
+.nav-btn{
+  background:var(--ink);color:var(--bg);
+  padding:8px 18px;border-radius:5px;
+  font-family:var(--mono);font-size:13px;
+  text-decoration:none;transition:all .15s;
+  letter-spacing:0.02em;
+}
+.nav-btn:hover{background:var(--accent)}
+
+/* ── HERO ── */
+.hero{
+  padding:80px 40px 72px;
+  max-width:960px;margin:0 auto;
+  position:relative;
+}
+
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--green-bg);border:1px solid var(--green-border);
+  color:var(--green);padding:5px 14px;border-radius:100px;
+  font-size:12px;margin-bottom:28px;letter-spacing:0.04em;
+}
+.eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+h1{
+  font-family:var(--sans);
+  font-size:clamp(40px,7vw,76px);
+  font-weight:900;
+  line-height:1.0;
+  letter-spacing:-2.5px;
+  margin-bottom:24px;
+  color:var(--ink);
+}
+h1 em{font-style:normal;color:var(--accent-light)}
+
+.hero-sub{
+  font-size:16px;color:var(--ink2);
+  max-width:560px;line-height:1.75;
+  margin-bottom:40px;
+  font-family:var(--mono);
+}
+
+/* ── SIGNUP FORM ── */
+.signup-row{display:flex;gap:10px;max-width:480px;margin-bottom:16px;flex-wrap:wrap}
+.signup-input{
+  flex:1;min-width:220px;
+  background:var(--surface);
+  border:1.5px solid var(--border2);
+  padding:12px 16px;border-radius:6px;
+  font-family:var(--mono);font-size:14px;color:var(--ink);
+  outline:none;transition:border-color .15s;
+}
+.signup-input:focus{border-color:var(--accent-light)}
+.signup-input::placeholder{color:var(--faint)}
+.btn-green{
+  background:var(--ink);color:var(--bg);
+  padding:12px 24px;border-radius:6px;
+  font-family:var(--mono);font-size:14px;
+  border:none;cursor:pointer;transition:all .15s;
+  white-space:nowrap;font-weight:500;
+}
+.btn-green:hover{background:var(--accent)}
+.btn-green:disabled{opacity:.5;cursor:not-allowed}
+.signup-note{font-size:12px;color:var(--muted);margin-top:8px}
+.signup-note a{color:var(--accent-light);text-decoration:none}
+#signup-msg{font-size:13px;margin-top:12px;min-height:20px}
+#signup-msg.ok{color:var(--green)}
+#signup-msg.err{color:var(--red)}
+
+/* ── DEMO TERMINAL ── */
+.demo-wrap{
+  margin:56px 0 0;
+  border:1.5px solid var(--border2);
+  border-radius:10px;
+  overflow:hidden;
+  background:var(--surface);
+  box-shadow:0 4px 32px rgba(0,0,0,0.06);
+}
+.demo-tabs{
+  display:flex;
+  border-bottom:1px solid var(--border);
+  background:var(--surface2);
+  padding:0 8px;
+}
+.demo-tab{
+  padding:10px 16px;font-size:12px;color:var(--muted);
+  cursor:pointer;border-bottom:2px solid transparent;
+  transition:all .15s;letter-spacing:0.04em;
+  margin-bottom:-1px;
+}
+.demo-tab.active{color:var(--ink);border-bottom-color:var(--accent-light)}
+.demo-pane{display:none;padding:24px;font-size:13px;line-height:1.9;overflow-x:auto}
+.demo-pane.active{display:block}
+.g{color:var(--accent-light)}
+.b{color:#2055a0}
+.o{color:#8a4a00}
+.dim{color:var(--muted)}
+.copy-btn2{
+  float:right;background:var(--surface2);
+  border:1px solid var(--border);color:var(--muted);
+  padding:4px 12px;border-radius:4px;
+  font-size:11px;cursor:pointer;font-family:var(--mono);
+  transition:all .15s;letter-spacing:0.04em;
+}
+.copy-btn2:hover{color:var(--ink);border-color:var(--border2)}
+
+/* response block */
+.res-block{
+  margin-top:16px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:6px;padding:20px;
+  font-size:12.5px;line-height:1.85;
+}
+
+/* ── SECTION COMMONS ── */
+section{padding:80px 40px;max-width:960px;margin:0 auto}
+.sec-label{
+  font-size:11px;color:var(--accent-light);
+  letter-spacing:0.14em;text-transform:uppercase;
+  margin-bottom:12px;display:flex;align-items:center;gap:8px;
+}
+.sec-label::before{content:'';display:inline-block;width:18px;height:1px;background:var(--accent-light)}
+h2{
+  font-family:var(--sans);font-size:clamp(28px,5vw,46px);
+  font-weight:900;letter-spacing:-1.5px;line-height:1.05;margin-bottom:12px;
+}
+.sec-sub{color:var(--ink2);font-size:15px;max-width:480px;line-height:1.7;margin-bottom:48px}
+
+.divider{height:1px;background:var(--border);margin:0 40px}
+
+/* ── FEATURES ── */
+.features{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.feat{background:var(--surface);padding:28px;transition:background .15s;position:relative}
+.feat:hover{background:var(--surface2)}
+.feat-icon{font-size:22px;margin-bottom:14px;display:block}
+.feat-title{font-family:var(--sans);font-size:16px;font-weight:700;margin-bottom:6px;letter-spacing:-0.3px}
+.feat-desc{color:var(--ink2);font-size:12.5px;line-height:1.7}
+.feat-tag{
+  display:inline-block;margin-top:10px;
+  font-size:11px;color:var(--green);
+  background:var(--green-bg);border:1px solid var(--green-border);
+  padding:2px 10px;border-radius:100px;
+}
+
+/* ── MODES ── */
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px}
+.mode-card{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:8px;padding:24px;transition:all .2s;cursor:pointer;
+}
+.mode-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.mode-card.active{border-color:var(--accent-light);background:var(--green-bg)}
+.mode-name{font-family:var(--sans);font-weight:800;font-size:17px;margin-bottom:6px;letter-spacing:-0.4px}
+.mode-tag{font-size:11px;color:var(--accent-light);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;display:block}
+.mode-desc{font-size:12.5px;color:var(--ink2);line-height:1.65}
+
+/* ── PRICING ── */
+.pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px}
+.plan{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:10px;padding:32px 28px;
+  position:relative;transition:transform .2s;
+}
+.plan:hover{transform:translateY(-3px)}
+.plan.pop{border-color:var(--accent-light);background:#fafff8}
+.plan.pop::before{
+  content:'POPULAR';position:absolute;top:-1px;left:50%;transform:translateX(-50%);
+  background:var(--accent-light);color:#fff;
+  font-size:10px;padding:4px 14px;border-radius:0 0 5px 5px;letter-spacing:0.1em;
+}
+.plan-name{font-family:var(--sans);font-weight:800;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px}
+.plan-price{font-family:var(--sans);font-size:44px;font-weight:900;letter-spacing:-2px;line-height:1;margin-bottom:4px}
+.plan-price sup{font-size:18px;vertical-align:super;letter-spacing:0}
+.plan-mo{color:var(--muted);font-size:12px;margin-bottom:20px}
+.plan-credits{color:var(--accent-light);font-size:13px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.plan-list{list-style:none;margin-bottom:28px}
+.plan-list li{padding:5px 0;font-size:12.5px;color:var(--ink2);display:flex;align-items:center;gap:8px}
+.plan-list li::before{content:'✓';color:var(--accent-light);font-size:12px}
+.plan-list li.off{color:var(--faint)}
+.plan-list li.off::before{content:'–';color:var(--faint)}
+.btn-plan{
+  display:block;text-align:center;
+  padding:12px;border-radius:6px;
+  font-family:var(--mono);font-size:13px;
+  text-decoration:none;transition:all .2s;letter-spacing:0.02em;
+  cursor:pointer;border:none;width:100%;font-weight:500;
+}
+.btn-outline{border:1.5px solid var(--border2);color:var(--ink);background:transparent}
+.btn-outline:hover{border-color:var(--accent-light);color:var(--accent)}
+.btn-filled{background:var(--ink);color:var(--bg)}
+.btn-filled:hover{background:var(--accent)}
+
+/* ── FAQ ── */
+.faq{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:40px}
+.faq-item{border-bottom:1px solid var(--border)}
+.faq-item:last-child{border-bottom:none}
+.faq-q{
+  padding:18px 24px;font-family:var(--sans);font-weight:700;font-size:15px;
+  cursor:pointer;display:flex;justify-content:space-between;align-items:center;
+  transition:background .15s;letter-spacing:-0.3px;
+}
+.faq-q:hover{background:var(--surface2)}
+.faq-a{
+  max-height:0;overflow:hidden;transition:max-height .3s ease;
+  font-size:13px;color:var(--ink2);line-height:1.75;
+}
+.faq-a.open{max-height:200px}
+.faq-a-inner{padding:0 24px 20px}
+.faq-arrow{transition:transform .3s;color:var(--muted);font-size:12px}
+.faq-arrow.open{transform:rotate(180deg)}
+
+/* ── FOOTER ── */
+footer{
+  border-top:1px solid var(--border);
+  padding:40px;
+  display:flex;justify-content:space-between;align-items:center;
+  max-width:960px;margin:0 auto;
+}
+.foot-logo{font-family:var(--sans);font-weight:900;font-size:15px;color:var(--muted)}
+.foot-links{display:flex;gap:24px;list-style:none}
+.foot-links a{color:var(--faint);text-decoration:none;font-size:12px;transition:color .15s}
+.foot-links a:hover{color:var(--muted)}
+.foot-copy{color:var(--faint);font-size:12px}
+
+@media(max-width:720px){
+  nav{padding:0 20px}
+  .hero{padding:48px 20px 56px}
+  section{padding:56px 20px}
+  h1{letter-spacing:-1.5px}
+  .features,.modes,.pricing{grid-template-columns:1fr}
+  footer{flex-direction:column;gap:20px;padding:32px 20px;text-align:center}
+  .divider{margin:0 20px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo">context<span>api</span></a>
+  <div class="nav-r">
+    <a href="#docs" class="nav-link">Docs</a>
+    <a href="#pricing" class="nav-link">Pricing</a>
+    <a href="#pricing" class="nav-btn">Get API key →</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<div class="hero">
+  <div class="hero-eyebrow">
+    <span class="eyebrow-dot"></span>
+    Built for AI agents &amp; RAG pipelines
+  </div>
+
+  <h1>Any URL.<br/><em>LLM-ready</em><br/>in one call.</h1>
+
+  <p class="hero-sub">
+    Stop wrestling with raw HTML. Send a URL, get back clean markdown, 
+    entities, sections, and structured metadata — optimized for language models.
+    No scraping code. No parsing headaches.
+  </p>
+
+  <div class="signup-row">
+    <input class="signup-input" type="email" id="email-input" placeholder="your@email.com"/>
+    <button class="btn-green" id="signup-btn" onclick="signup()">Get free key →</button>
+  </div>
+  <div class="signup-note">100 free credits. No card required. Key sent to your inbox instantly.</div>
+  <div id="signup-msg"></div>
+
+  <!-- DEMO -->
+  <div class="demo-wrap" style="margin-top:52px">
+    <div class="demo-tabs">
+      <div class="demo-tab active" onclick="demoTab(this,'curl')">cURL</div>
+      <div class="demo-tab" onclick="demoTab(this,'node')">Node.js</div>
+      <div class="demo-tab" onclick="demoTab(this,'python')">Python</div>
+      <div class="demo-tab" onclick="demoTab(this,'response')">Response</div>
+    </div>
+
+    <div id="dp-curl" class="demo-pane active">
+      <button class="copy-btn2" onclick="copyPane('dp-curl')">copy</button>
+<pre>curl -X POST https://contextapi.dev/api/extract \
+  -H <span class="o">"Authorization: Bearer ctx_your_key_here"</span> \
+  -H <span class="o">"Content-Type: application/json"</span> \
+  -d <span class="o">'{"url": "https://techcrunch.com/article", "mode": "rag"}'</span></pre>
+    </div>
+
+    <div id="dp-node" class="demo-pane">
+      <button class="copy-btn2" onclick="copyPane('dp-node')">copy</button>
+<pre><span class="g">const</span> res = <span class="g">await</span> fetch(<span class="o">"https://contextapi.dev/api/extract"</span>, {
+  method: <span class="o">"POST"</span>,
+  headers: {
+    <span class="o">"Authorization"</span>: <span class="o">`Bearer ${</span>process.env.CONTEXT_API_KEY<span class="o">}`</span>,
+    <span class="o">"Content-Type"</span>: <span class="o">"application/json"</span>,
+  },
+  body: JSON.stringify({
+    url: <span class="o">"https://example.com/article"</span>,
+    mode: <span class="o">"rag"</span>,   <span class="dim">// "rag" | "summary" | "full"</span>
+  }),
+});
+
+<span class="g">const</span> data = <span class="g">await</span> res.json();
+console.log(data.markdown);   <span class="dim">// clean content, ready for your LLM</span>
+console.log(data.entities);   <span class="dim">// { people, organizations, topics }</span></pre>
+    </div>
+
+    <div id="dp-python" class="demo-pane">
+      <button class="copy-btn2" onclick="copyPane('dp-python')">copy</button>
+<pre><span class="g">import</span> requests, os
+
+r = requests.post(
+    <span class="o">"https://contextapi.dev/api/extract"</span>,
+    headers={<span class="o">"Authorization"</span>: f<span class="o">"Bearer {os.environ['CONTEXT_API_KEY']}"</span>},
+    json={
+        <span class="o">"url"</span>: <span class="o">"https://example.com/article"</span>,
+        <span class="o">"mode"</span>: <span class="o">"rag"</span>,
+    }
+)
+
+data = r.json()
+<span class="g">print</span>(data[<span class="o">"summary"</span>])      <span class="dim"># 3-sentence summary</span>
+<span class="g">print</span>(data[<span class="o">"token_count_approx"</span>])  <span class="dim"># know your context window usage</span></pre>
+    </div>
+
+    <div id="dp-response" class="demo-pane">
+      <div class="res-block">
+<pre>{
+  <span class="g">"success"</span>: <span class="b">true</span>,
+  <span class="g">"url"</span>: <span class="o">"https://example.com/article"</span>,
+  <span class="g">"title"</span>: <span class="o">"Why AI Agents Need Better Web Context"</span>,
+  <span class="g">"markdown"</span>: <span class="o">"## Introduction\n\nAI agents increasingly need..."</span>,
+  <span class="g">"summary"</span>: <span class="o">"This article explains why raw HTML is poor input..."</span>,
+  <span class="g">"key_points"</span>: [<span class="o">"Raw HTML contains 80% noise"</span>, <span class="o">"LLMs waste tokens on nav/footer"</span>, ...],
+  <span class="g">"entities"</span>: {
+    <span class="g">"people"</span>: [<span class="o">"Sam Altman"</span>],
+    <span class="g">"organizations"</span>: [<span class="o">"OpenAI"</span>, <span class="o">"Anthropic"</span>],
+    <span class="g">"topics"</span>: [<span class="o">"AI agents"</span>, <span class="o">"RAG"</span>, <span class="o">"web scraping"</span>]
+  },
+  <span class="g">"sections"</span>: [{ <span class="g">"heading"</span>: <span class="o">"Introduction"</span>, <span class="g">"content"</span>: <span class="o">"..."</span>, <span class="g">"tokens_approx"</span>: <span class="b">240</span> }],
+  <span class="g">"token_count_approx"</span>: <span class="b">1840</span>,
+  <span class="g">"content_type"</span>: <span class="o">"article"</span>,
+  <span class="g">"meta"</span>: { <span class="g">"processing_ms"</span>: <span class="b">1240</span>, <span class="g">"credits_used"</span>: <span class="b">1</span>, <span class="g">"credits_remaining"</span>: <span class="b">99</span> }
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── FEATURES ── -->
+<section id="features">
+  <div class="sec-label">Why ContextAPI</div>
+  <h2>Not a scraper.<br/>A context engine.</h2>
+  <p class="sec-sub">Raw HTML is 80% noise — scripts, nav bars, ads, footers. We give your LLM only what it actually needs.</p>
+
+  <div class="features">
+    <div class="feat">
+      <span class="feat-icon">🧠</span>
+      <div class="feat-title">LLM-Optimized Output</div>
+      <div class="feat-desc">Clean markdown, token counts, and section boundaries. Drop straight into your prompt or vector store without extra processing.</div>
+      <span class="feat-tag">zero post-processing</span>
+    </div>
+    <div class="feat">
+      <span class="feat-icon">🔍</span>
+      <div class="feat-title">Entity Extraction</div>
+      <div class="feat-desc">People, organizations, topics, and locations automatically pulled from every page. Ready to use as metadata or for graph building.</div>
+      <span class="feat-tag">structured JSON</span>
+    </div>
+    <div class="feat">
+      <span class="feat-icon">📐</span>
+      <div class="feat-title">Three Extraction Modes</div>
+      <div class="feat-desc">RAG mode for retrieval chunks, Summary mode for quick context, Full mode for complete content. Match the mode to your use case.</div>
+      <span class="feat-tag">rag · summary · full</span>
+    </div>
+    <div class="feat">
+      <span class="feat-icon">🪙</span>
+      <div class="feat-title">Token Count Included</div>
+      <div class="feat-desc">Every response includes an approximate token count so you can manage context windows intelligently without extra API calls.</div>
+      <span class="feat-tag">budget your context</span>
+    </div>
+    <div class="feat">
+      <span class="feat-icon">⚡</span>
+      <div class="feat-title">Fast &amp; Reliable</div>
+      <div class="feat-desc">Most extractions complete in under 2 seconds. Serverless globally distributed — no cold starts that slow your agent down.</div>
+      <span class="feat-tag">~1.5s avg</span>
+    </div>
+    <div class="feat">
+      <span class="feat-icon">🔌</span>
+      <div class="feat-title">One Endpoint, Any Language</div>
+      <div class="feat-desc">REST API works with any language or framework. cURL, Python, Node, Go, Ruby — if it can make an HTTP request, it works.</div>
+      <span class="feat-tag">language agnostic</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── MODES ── -->
+<section id="docs">
+  <div class="sec-label">Extraction Modes</div>
+  <h2>Three modes.<br/>One endpoint.</h2>
+  <p class="sec-sub">Pick the mode that matches what your agent needs. Same endpoint, different optimization target.</p>
+  <div class="modes">
+    <div class="mode-card active">
+      <span class="mode-tag">mode: "rag"</span>
+      <div class="mode-name">RAG Mode</div>
+      <div class="mode-desc">Optimized for retrieval pipelines. Content split into independently meaningful chunks, each with token counts. Ideal for vector databases and semantic search.</div>
+    </div>
+    <div class="mode-card">
+      <span class="mode-tag">mode: "summary"</span>
+      <div class="mode-name">Summary Mode</div>
+      <div class="mode-desc">Dense 3–5 sentence summary plus key points and entities. Perfect when you need quick context without full content — saves tokens in long agent chains.</div>
+    </div>
+    <div class="mode-card">
+      <span class="mode-tag">mode: "full"</span>
+      <div class="mode-name">Full Mode</div>
+      <div class="mode-desc">Everything: complete markdown, all sections, tables, code blocks, links, entities, and metadata. Use when your agent needs the complete picture.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── PRICING ── -->
+<section id="pricing">
+  <div class="sec-label">Pricing</div>
+  <h2>Simple credit pricing.<br/>No surprises.</h2>
+  <p class="sec-sub">1 credit = 1 URL extraction. Credits don't expire. Upgrade anytime.</p>
+
+  <div class="pricing">
+    <div class="plan">
+      <div class="plan-name">Free</div>
+      <div class="plan-price"><sup>$</sup>0</div>
+      <div class="plan-mo">forever</div>
+      <div class="plan-credits">100 credits</div>
+      <ul class="plan-list">
+        <li>All 3 extraction modes</li>
+        <li>Full JSON response</li>
+        <li>Entity extraction</li>
+        <li class="off">Priority processing</li>
+        <li class="off">Email support</li>
+      </ul>
+      <button class="btn-plan btn-outline" onclick="document.getElementById('email-input').focus()">Get free key</button>
+    </div>
+
+    <div class="plan pop">
+      <div class="plan-name">Builder</div>
+      <div class="plan-price"><sup>$</sup>19</div>
+      <div class="plan-mo">per month</div>
+      <div class="plan-credits">3,000 credits / month</div>
+      <ul class="plan-list">
+        <li>Everything in Free</li>
+        <li>Priority processing</li>
+        <li>Credits roll over 1 month</li>
+        <li>Email support</li>
+        <li class="off">Volume discounts</li>
+      </ul>
+      <button class="btn-plan btn-filled" onclick="checkout('builder')">Start building →</button>
+    </div>
+
+    <div class="plan">
+      <div class="plan-name">Scale</div>
+      <div class="plan-price"><sup>$</sup>49</div>
+      <div class="plan-mo">per month</div>
+      <div class="plan-credits">10,000 credits / month</div>
+      <ul class="plan-list">
+        <li>Everything in Builder</li>
+        <li>Credits roll over 3 months</li>
+        <li>Volume discounts on overages</li>
+        <li>Priority email support</li>
+        <li>Usage analytics dashboard</li>
+      </ul>
+      <button class="btn-plan btn-outline" onclick="checkout('scale')">Get started →</button>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── FAQ ── -->
+<section>
+  <div class="sec-label">FAQ</div>
+  <h2>Common questions.</h2>
+
+  <div class="faq">
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        How is this different from BeautifulSoup or Firecrawl?
+        <span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-a">
+        <div class="faq-a-inner">BeautifulSoup gives you raw text — you still need to clean, structure, and format it yourself. Firecrawl is a full crawling platform built for large-scale scraping. ContextAPI does one thing: takes a single URL and returns content that's immediately usable by an LLM — no extra code on your end.</div>
+      </div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Does it work on paywalled or JavaScript-heavy sites?
+        <span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-a">
+        <div class="faq-a-inner">For public pages, yes — including most JavaScript-rendered sites. For pages behind logins or hard paywalls, the extraction will return whatever is publicly visible. Full authenticated session support is on the roadmap.</div>
+      </div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        What counts as one credit?
+        <span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-a">
+        <div class="faq-a-inner">One POST to /api/extract = one credit, regardless of page size or extraction mode. Failed requests (invalid URLs, fetch errors) do not use a credit.</div>
+      </div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        How fast is it?
+        <span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-a">
+        <div class="faq-a-inner">Most extractions complete in 1–2.5 seconds. This includes fetching the page, cleaning HTML, and running the Claude Haiku structuring pass. Pages that are slow to load or very long may take up to 5 seconds.</div>
+      </div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Do unused credits expire?
+        <span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-a">
+        <div class="faq-a-inner">Free tier credits don't expire. Paid plan credits roll over for 1 month (Builder) or 3 months (Scale), then reset on renewal.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+<footer>
+  <div class="foot-logo">contextapi</div>
+  <ul class="foot-links">
+    <li><a href="#docs">Docs</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="mailto:hi@contextapi.dev">Contact</a></li>
+  </ul>
+  <div class="foot-copy">© 2026 ContextAPI</div>
+</footer>
+
+<script>
+// ── Demo tabs ──
+function demoTab(el, id) {
+  document.querySelectorAll('.demo-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.demo-pane').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('dp-' + id).classList.add('active');
+}
+
+// ── Copy code ──
+function copyPane(id) {
+  const pane = document.getElementById(id);
+  const text = pane.innerText.replace(/^copy\n/, '').trim();
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = pane.querySelector('.copy-btn2');
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 2000);
+  });
+}
+
+// ── Free signup ──
+async function signup() {
+  const email = document.getElementById('email-input').value.trim();
+  const msg = document.getElementById('signup-msg');
+  const btn = document.getElementById('signup-btn');
+
+  if (!email || !email.includes('@')) {
+    msg.textContent = 'Enter a valid email address.';
+    msg.className = 'err';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  msg.textContent = '';
+
+  try {
+    const res = await fetch('/api/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      msg.textContent = '✓ Check your inbox — key is on its way.';
+      msg.className = 'ok';
+      document.getElementById('email-input').value = '';
+    } else {
+      msg.textContent = data.error || 'Something went wrong. Try again.';
+      msg.className = 'err';
+    }
+  } catch {
+    msg.textContent = 'Network error. Try again.';
+    msg.className = 'err';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Get free key →';
+}
+
+// Submit on Enter
+document.getElementById('email-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') signup();
+});
+
+// ── Pricing checkout ──
+function checkout(plan) {
+  const urls = {
+    builder: 'https://buy.stripe.com/REPLACE_BUILDER_LINK',
+    scale:   'https://buy.stripe.com/REPLACE_SCALE_LINK',
+  };
+  window.location.href = urls[plan] || '#pricing';
+}
+
+// ── FAQ toggle ──
+function toggleFaq(el) {
+  const answer = el.nextElementSibling;
+  const arrow = el.querySelector('.faq-arrow');
+  const isOpen = answer.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.faq-a').forEach(a => a.classList.remove('open'));
+  document.querySelectorAll('.faq-arrow').forEach(a => a.classList.remove('open'));
+  if (!isOpen) {
+    answer.classList.add('open');
+    arrow.classList.add('open');
+  }
+}
+</script>
+</body>
+</html>
